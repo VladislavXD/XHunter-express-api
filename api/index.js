@@ -11,12 +11,40 @@ const app = express();
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '6725080038:AAH9HLWT6_ORc9U15jkVo06DIOQMjk17P-c';
 
 // Middleware
-app.use(cors())
-app.use(express.json())
+app.use(cors({
+  origin: true, // Разрешить все источники (для тестирования)
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200
+}))
+
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.set('trust proxy', true);
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+// Обработчик для preflight запросов
+app.options('*', cors());
+
+// Обработчик для корневого пути
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'API is running on Vercel', 
+    status: 'OK',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Обработчик для проверки состояния API
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // новый функционал
 app.post('/sendDataToTelegram', upload.none(), async(req, res)=>{
@@ -116,11 +144,6 @@ app.post('/sendLocationToTelegram', async (req, res) => {
     console.error('Error sending location to Telegram:', error);
     res.status(500).send('Error sending location to Telegram');
   }
-});
-
-// Обработчик для корневого пути
-app.get('/', (req, res) => {
-  res.json({ message: 'API is running on Vercel' });
 });
 
 // Экспорт для Vercel
